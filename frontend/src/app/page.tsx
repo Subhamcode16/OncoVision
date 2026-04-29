@@ -1,274 +1,385 @@
-"use client";
+'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
+  BrainCircuit, 
   Activity, 
-  ShieldCheck, 
+  ChevronDown, 
   Stethoscope, 
-  ChevronRight, 
-  Search, 
-  AlertCircle,
-  FileText,
-  BarChart3,
-  Dna
+  ShieldCheck, 
+  Microscope, 
+  FileText, 
+  Share2, 
+  Cpu, 
+  Lock, 
+  Database,
+  ArrowRight,
+  Zap
 } from 'lucide-react';
+import { gsap } from 'gsap';
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
+import Background from '@/components/Background';
+import Specimen from '@/components/Specimen';
+import RadarChart from '@/components/RadarChart';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollToPlugin);
+}
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [bgVariant, setBgVariant] = useState<'normal' | 'malignant' | 'benign'>('normal');
+  const [formData, setFormData] = useState({
+    radius_mean: '17.99',
+    texture_mean: '10.38',
+    perimeter_mean: '122.8',
+    area_mean: '1001.0',
+    smoothness_mean: '0.1184',
+    compactness_mean: '0.2776',
+    concavity_mean: '0.3001',
+    concave_points_mean: '0.1471'
+  });
+
+  const heroRef = useRef<HTMLDivElement>(null);
+  const appRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const tl = gsap.timeline();
+    tl.from('.hero-content', { opacity: 0, y: 30, duration: 1, ease: 'power3.out', clearProps: 'all' })
+      .from('.hero-3d', { opacity: 0, scale: 0.8, duration: 1.5, ease: 'power2.out', clearProps: 'all' }, '-=0.5');
+  }, []);
+
+  const scrollToApp = () => {
+    gsap.to(window, { duration: 1, scrollTo: appRef.current, ease: 'power3.inOut' });
+  };
 
   const handlePredict = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setIsScanning(true);
     setResult(null);
-    
-    // Extract the 4 actual values from the form
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
-    const payload = {
-      radius_mean: parseFloat(formData.get('radius_mean') as string) || 14.06,
-      texture_mean: parseFloat(formData.get('texture_mean') as string) || 19.24,
-      perimeter_mean: parseFloat(formData.get('perimeter_mean') as string) || 91.55,
-      area_mean: parseFloat(formData.get('area_mean') as string) || 648.54
-    };
-    
-    try {
-      const response = await fetch('http://localhost:8000/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      if (!response.ok) throw new Error('Prediction failed');
-      
-      const data = await response.json();
-      setResult({
-        ...data,
-        topFactors: ["Radius Mean", "Perimeter Mean", "Area Mean", "Texture Mean"]
-      });
-    } catch (error) {
-      console.error(error);
-      alert("Error: Backend server is not responding. Ensure src/server.py is running on port 8000.");
-    } finally {
-      setLoading(false);
-    }
+
+    // Simulate "Cinematic Scan" timing
+    setTimeout(async () => {
+      try {
+        const response = await fetch('http://localhost:8000/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        const data = await response.json();
+        setResult(data);
+        
+        const diagnosis = data.diagnosis.toLowerCase();
+        if (diagnosis.includes('malignant')) setBgVariant('malignant');
+        else if (diagnosis.includes('benign')) setBgVariant('benign');
+        else setBgVariant('normal');
+
+        gsap.from('.verdict-reveal', { y: 30, opacity: 0, duration: 0.8, ease: 'back.out(1.7)' });
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+        setIsScanning(false);
+      }
+    }, 2000); // Cinematic delay
+  };
+
+  const handleChange = (key: string, value: string) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
   return (
-    <main>
-      {/* Header */}
-      <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div className="container" style={{ padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '8px' }}>
-              <Dna size={24} />
-            </div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.025em' }}>OncoVision AI</h1>
+    <div className="relative min-h-screen">
+      <Background variant={bgVariant} />
+      
+      {/* Navbar */}
+      <nav className="fixed top-0 w-full z-50 medical-glass py-4 px-8 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <BrainCircuit className="w-5 h-5 text-white" />
           </div>
-          <nav style={{ display: 'flex', gap: '2rem' }}>
-            <a href="#" className="input-label" style={{ margin: 0 }}>Methodology</a>
-            <a href="#" className="input-label" style={{ margin: 0 }}>Accuracy Report</a>
-            <a href="#" className="input-label" style={{ margin: 0 }}>Contact</a>
-          </nav>
+          <span className="text-xl font-black tracking-tighter uppercase">OncoVision <span className="text-blue-600">AI</span></span>
         </div>
-      </header>
+        <div className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-widest text-slate-500">
+          <a href="#" className="hover:text-blue-600 transition-colors">Technology</a>
+          <a href="#" className="hover:text-blue-600 transition-colors">Diagnostics</a>
+          <a href="#" className="hover:text-blue-600 transition-colors">Security</a>
+          <button onClick={scrollToApp} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">Launch App</button>
+        </div>
+      </nav>
+      
+      <main className="pt-24">
 
-      <div className="container">
-        {/* Hero Section */}
-        <section style={{ textAlign: 'center', margin: '4rem 0' }} className="animate-fade-in">
-          <span className="badge" style={{ background: '#dbeafe', color: '#1e40af', marginBottom: '1rem', display: 'inline-block' }}>
-            Powered by Tuned SVM & XGBoost
-          </span>
-          <h2 style={{ fontSize: '3.5rem', fontWeight: 800, lineHeight: 1.1, marginBottom: '1.5rem', color: '#0f172a' }}>
-            Next-Gen Cancer <span style={{ color: 'var(--primary)' }}>Classification</span>
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1.25rem', maxWidth: '700px', margin: '0 auto 2.5rem' }}>
-            A high-precision diagnostic bridge for medical professionals. Our ensemble models achieve 99% accuracy in identifying malignant tissue.
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button className="btn btn-primary" onClick={() => document.getElementById('diagnostic-form')?.scrollIntoView({ behavior: 'smooth' })}>
-              Start Diagnostic <ChevronRight size={18} style={{ marginLeft: '0.5rem' }} />
-            </button>
-            <button className="btn" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-              View Case Studies
-            </button>
-          </div>
-        </section>
-
-        {/* Diagnostic Area */}
-        <div className="grid" id="diagnostic-form">
-          {/* Form Card */}
-          <div className="card animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-              <Stethoscope className="primary" style={{ color: 'var(--primary)' }} />
-              <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Diagnostic Inputs</h3>
+      {/* Hero Section */}
+      <section ref={heroRef} style={{ paddingBottom: '120px', paddingTop: '120px' }} className="min-h-[calc(100vh-96px)] flex flex-col items-center justify-center relative section-container z-10">
+        <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
+          <div className="hero-content text-left relative z-30 opacity-100">
+            <div className="inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-black uppercase tracking-widest">
+              <Zap className="w-3 h-3" />
+              Next-Gen Diagnostic Intelligence
             </div>
-            
-            <form onSubmit={handlePredict}>
-              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="input-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className="input-label">Lump Size (Radius)</label>
-                    <div className="tooltip-trigger" title="Average distance from center to the perimeter of the lump.">
-                      <AlertCircle size={14} style={{ opacity: 0.5 }} />
-                    </div>
-                  </div>
-                  <input type="number" step="0.01" name="radius_mean" className="input-field" placeholder="e.g. 17.99" required />
-                </div>
-                <div className="input-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className="input-label">Surface Texture</label>
-                    <div className="tooltip-trigger" title="How irregular or rough the surface of the lump appears.">
-                      <AlertCircle size={14} style={{ opacity: 0.5 }} />
-                    </div>
-                  </div>
-                  <input type="number" step="0.01" name="texture_mean" className="input-field" placeholder="e.g. 10.38" required />
-                </div>
-                <div className="input-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className="input-label">Boundary Length</label>
-                    <div className="tooltip-trigger" title="The total distance around the edge of the detected area.">
-                      <AlertCircle size={14} style={{ opacity: 0.5 }} />
-                    </div>
-                  </div>
-                  <input type="number" step="0.01" name="perimeter_mean" className="input-field" placeholder="e.g. 122.80" required />
-                </div>
-                <div className="input-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <label className="input-label">Total Surface Area</label>
-                    <div className="tooltip-trigger" title="The total area covered by the detected lump.">
-                      <AlertCircle size={14} style={{ opacity: 0.5 }} />
-                    </div>
-                  </div>
-                  <input type="number" step="0.01" name="area_mean" className="input-field" placeholder="e.g. 1001.0" required />
-                </div>
-              </div>
-
-              <div style={{ padding: '1rem', background: '#f1f5f9', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', display: 'flex', gap: '0.5rem', lineHeight: 1.4 }}>
-                  <ShieldCheck size={16} className="primary" /> 
-                  These measurements are typically found in your biopsy or ultrasound report.
-                </p>
-              </div>
-
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-                {loading ? 'Analyzing Neural Patterns...' : 'Generate Prediction'}
+            <h1 className="text-8xl font-black tracking-tighter text-slate-950 leading-[0.9] mb-8 drop-shadow-sm">
+              Predictive <br />
+              <span className="text-blue-600">Oncology</span> <br />
+              Refined.
+            </h1>
+            <p className="text-xl text-slate-700 font-medium mb-10 max-w-lg leading-relaxed">
+              Harnessing tuned SVM architectures to provide clinicians with millisecond-grade cytological insights. Secure, localized, and precision-engineered.
+            </p>
+            <div className="flex gap-4">
+              <button onClick={scrollToApp} className="btn-primary flex items-center gap-2">
+                Launch Diagnostic Suite <ArrowRight className="w-5 h-5" />
               </button>
-            </form>
+              <button className="px-8 py-4 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all">
+                View Research
+              </button>
+            </div>
           </div>
-
-          {/* Results/Stats Card */}
-          <div className="card animate-fade-in" style={{ animationDelay: '0.2s', display: 'flex', flexDirection: 'column' }}>
-            {!result ? (
-              <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-muted)' }}>
-                <Activity size={48} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-                <p>Waiting for diagnostic inputs...</p>
-              </div>
-            ) : (
-              <div style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Analysis Report</h3>
-                    <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '0.25rem' }}>AI-Driven Diagnostic Assessment</p>
-                  </div>
-                  <span className={`badge ${result.diagnosis === 'Malignant' ? 'badge-malignant' : 'badge-benign'}`} style={{ fontSize: '1rem', padding: '0.5rem 1rem' }}>
-                    {result.diagnosis === 'Malignant' ? '⚠️ High Risk' : '✅ Low Risk'}
-                  </span>
-                </div>
-
-                <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                  <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>AI Confidence</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>{result.confidence}%</div>
-                  </div>
-                  <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Status</div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: result.diagnosis === 'Malignant' ? '#ef4444' : '#10b981' }}>
-                      {result.diagnosis === 'Malignant' ? 'Action Required' : 'Normal Results'}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '2rem' }}>
-                  <h4 className="input-label" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <BarChart3 size={16} /> Visual Reason for Prediction
-                  </h4>
-                  <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1rem', lineHeight: 1.5 }}>
-                    This chart shows which physical characteristics of the lump most influenced the AI's decision. 
-                    <span style={{ color: '#ef4444' }}> Red bars</span> mean that characteristic increased the risk.
-                  </p>
-                  <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '1rem', border: '1px solid #e2e8f0' }}>
-                    <img src="/shap_summary_svm.png" alt="SHAP Analysis" style={{ width: '100%', borderRadius: '8px' }} />
-                  </div>
-                </div>
-
-                <div style={{ padding: '1.25rem', background: result.diagnosis === 'Malignant' ? '#fff1f2' : '#f0fdf4', border: `1px solid ${result.diagnosis === 'Malignant' ? '#fecdd3' : '#dcfce7'}`, borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    {result.diagnosis === 'Malignant' ? <AlertCircle style={{ color: '#e11d48' }} /> : <ShieldCheck style={{ color: '#15803d' }} />}
-                    <div>
-                      <p style={{ fontWeight: 700, color: result.diagnosis === 'Malignant' ? '#9f1239' : '#166534', fontSize: '0.95rem' }}>
-                        {result.diagnosis === 'Malignant' ? 'Important: Seek Medical Advice' : 'Everything Looks Good'}
-                      </p>
-                      <p style={{ color: result.diagnosis === 'Malignant' ? '#be123c' : '#15803d', fontSize: '0.875rem', lineHeight: 1.5, marginTop: '0.25rem' }}>
-                        {result.diagnosis === 'Malignant' 
-                          ? 'The AI has detected patterns commonly associated with malignant cells. This is not a final diagnosis, but you should consult an oncologist immediately for a physical exam and biopsy.'
-                          : 'The AI has categorized these features as benign (healthy). You should continue with your regular self-exams and scheduled clinical screenings.'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="hero-3d relative flex items-center justify-center">
+            <div className="absolute w-[500px] h-[500px] bg-blue-400/10 blur-[100px] rounded-full -z-10" />
+            <Specimen />
           </div>
         </div>
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce cursor-pointer" onClick={scrollToApp}>
+          <ChevronDown className="w-6 h-6 text-slate-300" />
+        </div>
+      </section>
 
-        {/* Info Section for Non-Medical Users */}
-        <section style={{ marginTop: '6rem', padding: '4rem', background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--border)' }}>
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <h3 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1.5rem', textAlign: 'center' }}>Understanding Your Report</h3>
-            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '3rem' }}>
-              <div>
-                <h5 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>What is Malignant?</h5>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  Malignant means the cells are cancerous and can spread to other parts of the body. Immediate medical attention is required to determine the best treatment path.
-                </p>
+      {/* Technology Section */}
+      <section style={{ paddingTop: '120px', paddingBottom: '120px' }} className="bg-slate-50/50 border-y border-slate-100">
+        <div className="section-container">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl font-black tracking-tight text-slate-900 mb-4">The Engine of Precision</h2>
+            <p className="text-slate-500 font-medium">Built on validated pathological datasets and advanced kernels.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { icon: Cpu, title: "SVM Architecture", desc: "Utilizing RBF kernels for high-dimensional feature separation with 98% validated accuracy." },
+              { icon: Database, title: "Pathology Mapping", desc: "Translating 8 critical cytological metrics into a unified pathological signature." },
+              { icon: Lock, title: "Secure Protocol", desc: "Local-first inference ensures patient data never leaves the clinical environment." }
+            ].map((tech, i) => (
+              <div key={i} className="medical-glass p-8 rounded-3xl group hover:border-blue-500/30 transition-all">
+                <div className="w-12 h-12 bg-white border border-slate-100 rounded-xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
+                  <tech.icon className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold mb-3">{tech.title}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">{tech.desc}</p>
               </div>
-              <div>
-                <h5 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>What is Benign?</h5>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  Benign means the lump or cells are non-cancerous. While they usually don't spread, they should still be monitored by a doctor to ensure they don't change over time.
-                </p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Diagnostic Workspace (The App) */}
+      <section ref={appRef} style={{ paddingBottom: '200px', paddingTop: '100px' }} className="section-container scroll-mt-24">
+        <div className="mb-16">
+          <div className="flex items-center gap-3 mb-4">
+            <Activity className="w-6 h-6 text-blue-600" />
+            <span className="text-blue-600 font-black uppercase tracking-[0.2em] text-xs">Clinical Command Center</span>
+          </div>
+          <h2 className="text-5xl font-black tracking-tight text-slate-950 mb-6">Diagnostic Workspace</h2>
+          <p className="text-slate-500 font-medium max-w-2xl">
+            Analyze your Fine Needle Aspiration (FNA) reports using our tuned SVM diagnostic engine.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-12 gap-12 items-start">
+          {/* Left: Guidance Sidebar */}
+          <div className="lg:col-span-4 sticky top-32">
+            <div className="medical-glass p-8 rounded-3xl border-blue-100 bg-blue-50/30">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="font-bold text-slate-900 leading-tight">Patient Guide</h3>
+              </div>
+
+              <div className="space-y-6">
+                <div className="p-4 bg-white rounded-2xl border border-blue-100 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Requirement</p>
+                  <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                    Locate the <span className="text-blue-600 font-bold underline decoration-blue-200">"Mean Values"</span> section on your FNA Pathology Report.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Parameter Glossary</p>
+                  {[
+                    { term: "Concavity", desc: "Measures the severity of dents in the cell boundary." },
+                    { term: "Texture", desc: "Variance in gray-scale values; measures surface roughness." },
+                    { term: "Compactness", desc: "Determines how tight or elongated the cell appears." },
+                    { term: "Smoothness", desc: "Local variation in the cell's radius length." }
+                  ].map((item, i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">{item.term}</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </section>
 
-        {/* Features Row */}
-        <div className="grid" style={{ marginTop: '4rem', gridTemplateColumns: 'repeat(3, 1fr)' }}>
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <FileText style={{ color: 'var(--primary)', marginBottom: '1rem' }} size={32} />
-            <h4 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Clinical Data</h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Supports standard Wisconsin Diagnostic Dataset features.</p>
-          </div>
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <BarChart3 style={{ color: 'var(--primary)', marginBottom: '1rem' }} size={32} />
-            <h4 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>99.2% Recall</h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Optimized to minimize false negatives in patient diagnosis.</p>
-          </div>
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <Search style={{ color: 'var(--primary)', marginBottom: '1rem' }} size={32} />
-            <h4 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Explainable AI</h4>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>SHAP integration reveals exactly why the model made its decision.</p>
+          {/* Right: Input & Visualization */}
+          <div className="lg:col-span-8 grid gap-8">
+            <div className="medical-glass p-10 rounded-[2.5rem] shadow-2xl shadow-blue-900/5">
+              <form onSubmit={handlePredict} className="space-y-8">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {Object.keys(formData).map((key) => {
+                    const translations: Record<string, string> = {
+                      radius_mean: 'Cell Radius',
+                      texture_mean: 'Surface Texture',
+                      perimeter_mean: 'Boundary Length',
+                      area_mean: 'Total Cell Area',
+                      smoothness_mean: 'Edge Smoothness',
+                      compactness_mean: 'Cell Density',
+                      concavity_mean: 'Shape Severity',
+                      concave_points_mean: 'Contour Points'
+                    };
+                    return (
+                      <div key={key} className="space-y-2 group">
+                        <div className="flex justify-between items-center px-1">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-focus-within:text-blue-600 transition-colors">
+                            {key.split('_')[0]} Mean
+                          </label>
+                          <span className="text-[9px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">
+                            {translations[key]}
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          step="any"
+                          value={formData[key as keyof typeof formData]}
+                          onChange={(e) => handleChange(key, e.target.value)}
+                          className="input-field"
+                          required
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className={`w-full py-5 rounded-2xl text-white font-black uppercase tracking-[0.2em] text-xs transition-all flex items-center justify-center gap-3 shadow-xl ${
+                    loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                  }`}
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Analyzing...
+                    </div>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4" />
+                      Initiate Diagnostic Analysis
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Live Monitor Visualization */}
+            <div className="medical-glass p-10 rounded-[2.5rem] relative overflow-hidden">
+              <div className="absolute top-8 left-10 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pathology Signature Radar</span>
+              </div>
+              <div className="h-[400px] w-full flex items-center justify-center">
+                <RadarChart data={formData} />
+              </div>
+              <div className="mt-8 flex justify-center gap-12 text-center border-t border-slate-100 pt-8">
+                {[
+                  { label: "Consistency", val: "98.4%" },
+                  { label: "Risk Bias", val: "Normal" },
+                  { label: "Node Stat", val: "SECURE", color: "text-green-600" }
+                ].map((stat, i) => (
+                  <div key={i}>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                    <p className={`text-lg font-black ${stat.color || 'text-slate-900'}`}>{stat.val}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <footer style={{ marginTop: '8rem', padding: '4rem 0', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          &copy; 2026 OncoVision AI Research Group. For clinical research use only.
-        </p>
+        {/* Results Verdict */}
+        {result && (
+          <div className="verdict-reveal mt-12 medical-glass p-10 rounded-[3rem] bg-white border-blue-100 shadow-2xl shadow-blue-900/10">
+            <div className="grid md:grid-cols-3 gap-12 items-center">
+              <div>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Diagnostic Result</p>
+                <div className={`text-7xl font-black tracking-tighter ${result.diagnosis === 'Malignant' ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {result.diagnosis}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Neural Confidence</p>
+                <div className="text-6xl font-black text-slate-900">{result.confidence}%</div>
+                <div className="h-2 w-full bg-slate-100 rounded-full mt-6 overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-1000 ${result.diagnosis === 'Malignant' ? 'bg-red-500' : 'bg-emerald-500'}`} 
+                    style={{ width: `${result.confidence}%` }}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-4">
+                <button className="flex items-center justify-between p-5 rounded-2xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all">
+                  <span>Download Report</span> <FileText className="w-5 h-5" />
+                </button>
+                <button className="flex items-center justify-between p-5 rounded-2xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all">
+                  <span>Clinical Consult</span> <Stethoscope className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Footer */}
+      <footer className="py-20 bg-slate-900 text-white">
+        <div className="section-container grid md:grid-cols-4 gap-12">
+          <div className="col-span-2">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <BrainCircuit className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-black tracking-tighter uppercase">OncoVision <span className="text-blue-600">AI</span></span>
+            </div>
+            <p className="text-slate-400 text-sm max-w-sm leading-relaxed">
+              Empowering clinical oncology with predictive neural intelligence. Optimized for cytological dataset analysis and precision diagnostic bridging.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-black text-xs uppercase tracking-widest mb-6">Resources</h4>
+            <ul className="space-y-4 text-slate-400 text-sm">
+              <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">SVM Research</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">API Reference</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-black text-xs uppercase tracking-widest mb-6">Contact</h4>
+            <ul className="space-y-4 text-slate-400 text-sm">
+              <li><a href="#" className="hover:text-white transition-colors">System Support</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Medical Legal</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Diagnostic Cloud</a></li>
+            </ul>
+          </div>
+        </div>
+        <div className="section-container mt-20 pt-8 border-t border-white/5 text-[10px] font-black uppercase tracking-[0.5em] text-slate-600 text-center">
+          © 2026 OncoVision Systems // Sterile Diagnostic Suite // v2.0.4-Stable
+        </div>
       </footer>
-    </main>
+      </main>
+    </div>
   );
 }

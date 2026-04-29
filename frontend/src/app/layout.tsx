@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
+import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
+
+import Cursor from "@/components/Cursor";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 
 export const metadata: Metadata = {
   title: "OncoVision AI | Cancer Detection System",
-  description: "Advanced breast cancer diagnostic classification system powered by Machine Learning.",
+  description: "Advanced breast cancer diagnostic support using tuned SVM models.",
 };
 
 export default function RootLayout({
@@ -12,13 +18,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
-      <body>{children}</body>
+    <html lang="en" className="scroll-smooth">
+      <body className={`${inter.variable} ${outfit.variable} font-sans antialiased bg-white text-slate-900`}>
+        <Cursor />
+        {children}
+      </body>
     </html>
   );
 }

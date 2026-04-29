@@ -42,11 +42,14 @@ except Exception as e:
     print(f"WARNING: Could not load models on startup: {e}")
 
 class PatientData(BaseModel):
-    # Mapping of our 4 UI features to their 0-indexed positions in the 30-feature vector
     radius_mean: float
     texture_mean: float
     perimeter_mean: float
     area_mean: float
+    smoothness_mean: float
+    compactness_mean: float
+    concavity_mean: float
+    concave_points_mean: float
 
 @app.post("/predict")
 async def predict(data: PatientData):
@@ -58,18 +61,21 @@ async def predict(data: PatientData):
 
     try:
         # 1. Start with the dataset means (neutral values)
-        # These are the means from our StandardScaler check
         features = np.array([
             14.06, 19.24, 91.55, 648.54, 0.096, 0.103, 0.089, 0.048, 0.180, 0.062,
             0.398, 1.218, 2.822, 39.24, 0.007, 0.025, 0.032, 0.011, 0.020, 0.003,
             16.17, 25.64, 106.62, 869.02, 0.132, 0.254, 0.276, 0.113, 0.290, 0.083
         ])
         
-        # 2. Inject the 4 real values from the user
+        # 2. Inject the 8 real values from the user
         features[0] = data.radius_mean
         features[1] = data.texture_mean
         features[2] = data.perimeter_mean
         features[3] = data.area_mean
+        features[4] = data.smoothness_mean
+        features[5] = data.compactness_mean
+        features[6] = data.concavity_mean
+        features[7] = data.concave_points_mean
         
         # 3. Reshape for scaling
         features_arr = features.reshape(1, -1)
