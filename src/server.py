@@ -4,8 +4,24 @@ import joblib
 import numpy as np
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import File, UploadFile
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from google import genai
+import json
+from dotenv import load_dotenv
 
+load_dotenv()
+
+# Rate Limiter setup
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="OncoVision AI Backend")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Configure Gemini
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Enable CORS for Next.js frontend
 app.add_middleware(
@@ -102,6 +118,76 @@ async def predict(data: PatientData):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Prediction error: {str(e)}")
+
+@app.post("/api/scan-report")
+@limiter.limit("5/minute")
+async def scan_report(file: UploadFile = File(...)):
+    """
+    Scans a medical report using Gemini 1.5 Flash and extracts SVM features.
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API Key not configured on server.")
+
+    try:
+        # Read file content
+        contents = await file.read()
+        
+        # Initialize the new Unified Gemini Client
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        
+        prompt = """
+        You are a clinical oncology data extractor. Analyze the attached medical report.
+        
+        TASK:
+        1. Determine if this is a breast pathology, FNA, or biopsy report.
+        2. If it is NOT a breast cancer related report (e.g., blood test, vitamin test), return: {"error": "not_oncology_report"}
+        3. If it IS a breast cancer report, extract or estimate the following 8 features based on the descriptive text.
+           Map the textual descriptions (e.g., 'small nuclei' vs 'large pleomorphic nuclei') to the typical ranges for the Wisconsin Breast Cancer Dataset.
+        
+        FIELDS TO EXTRACT:
+        - radius_mean (Typical range: 6.0 to 28.0)
+        - texture_mean (Typical range: 9.0 to 39.0)
+        - perimeter_mean (Typical range: 43.0 to 188.0)
+        - area_mean (Typical range: 143.0 to 2501.0)
+        - smoothness_mean (Typical range: 0.05 to 0.16)
+        - compactness_mean (Typical range: 0.01 to 0.34)
+        - concavity_mean (Typical range: 0.0 to 0.42)
+        - concave_points_mean (Typical range: 0.0 to 0.20)
+        
+        Return ONLY a JSON object.
+        Example: {"radius_mean": 14.5, "texture_mean": 20.1, ...}
+        """
+
+        # Generate content using the new SDK pattern
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[
+                prompt,
+                {"mime_type": file.content_type, "data": contents}
+            ]
+        )
+        
+        try:
+            # Extract JSON from response text (handle markdown code blocks if any)
+            text_response = response.text
+            if "```json" in text_response:
+                text_response = text_response.split("```json")[1].split("```")[0]
+            elif "```" in text_response:
+                text_response = text_response.split("```")[1].split("```")[0]
+            
+            extracted_data = json.loads(text_response.strip())
+            
+            if "error" in extracted_data:
+                return {"success": False, "error": extracted_data["error"]}
+                
+            return {"success": True, "data": extracted_data}
+            
+        except Exception as json_err:
+            print(f"AI Response parsing error: {json_err} | Raw: {response.text}")
+            raise HTTPException(status_code=500, detail="Failed to parse AI response.")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Scanning error: {str(e)}")
 
 @app.get("/health")
 async def health():

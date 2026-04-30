@@ -20,6 +20,7 @@ Breast cancer is the most common cancer among women worldwide. However, medical 
 
 *   **97.6% Recall Focus:** Our core SVM engine is tuned specifically to minimize False Negatives, ensuring that early-stage malignant cells are flagged with maximum sensitivity.
 *   **Explainable AI (SHAP):** Every diagnosis is accompanied by a SHAP (SHapley Additive exPlanations) chart, revealing exactly which physical characteristics led the AI to its conclusion.
+*   **Intelligent Report Gateway:** Powered by **Gemini 2.5 Flash**, users can upload their pathology reports directly. The AI scans the clinical text, extracts cytological metrics, and auto-populates the diagnostic model, removing the technical barrier for laypeople.
 *   **Patient-Friendly Interface:** We translate complex clinical metrics into plain English, providing clear action steps and helpful tooltips for non-medical users.
 
 ---
@@ -41,8 +42,9 @@ graph TD
 | Category | Technology |
 | :--- | :--- |
 | **Machine Learning** | Scikit-Learn, SVM, XGBoost, SHAP |
+| **Generative AI** | Google Gemini 2.5 Flash (via google-genai SDK) |
 | **Backend** | FastAPI, Python 3.12, Joblib |
-| **Frontend** | Next.js 15 (App Router), TypeScript, Vanilla CSS |
+| **Frontend** | Next.js 15 (App Router), TypeScript, Vanilla CSS, GSAP |
 | **Connectivity** | Cloudflare Tunnel (Remote-to-Local Bridge) |
 
 ---
@@ -53,6 +55,7 @@ graph TD
 | **SVM Engine** | Core Model | `models/svm_tuned.pkl` | Optimized support vector machine with 97.6% recall. |
 | **Prediction API** | Backend | `src/server.py` | FastAPI server that scales inputs and performs inference. |
 | **Diagnostic UI** | Frontend | `frontend/src/app/page.tsx` | High-fidelity medical dashboard with patient-friendly mode. |
+| **Report Scanner** | AI Agent | `src/server.py` | Gemini-powered report analysis and feature extraction. |
 | **Live Logger** | Tooling | `live_logger.py` | Real-time bridge for streaming Colab logs to local dev. |
 
 ---

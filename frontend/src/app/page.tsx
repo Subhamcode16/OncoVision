@@ -14,7 +14,12 @@ import {
   Lock, 
   Database,
   ArrowRight,
-  Zap
+  Zap,
+  Upload,
+  AlertCircle,
+  CheckCircle2,
+  ScanSearch,
+  Sparkles
 } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
@@ -30,6 +35,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanSuccess, setScanSuccess] = useState(false);
   const [bgVariant, setBgVariant] = useState<'normal' | 'malignant' | 'benign'>('normal');
   const [formData, setFormData] = useState({
     radius_mean: '17.99',
@@ -44,6 +51,7 @@ export default function Home() {
 
   const heroRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const tl = gsap.timeline();
@@ -89,6 +97,45 @@ export default function Home() {
 
   const handleChange = (key: string, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setIsScanning(true);
+    setScanError(null);
+    setScanSuccess(false);
+
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+
+    try {
+      const response = await fetch('http://localhost:8000/api/scan-report', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setFormData(prev => ({ ...prev, ...result.data }));
+        setScanSuccess(true);
+        gsap.from('.wizard-item', { x: -20, opacity: 0, stagger: 0.1, duration: 0.5 });
+      } else {
+        if (result.error === 'not_oncology_report') {
+          setScanError('This report does not appear to be a breast cancer pathology/FNA report. Please upload a valid oncology document.');
+        } else {
+          setScanError('Failed to parse the report. Please ensure the image is clear.');
+        }
+      }
+    } catch (error) {
+      setScanError('Server connection lost. Please check if the backend is running.');
+    } finally {
+      setLoading(false);
+      setIsScanning(false);
+    }
   };
 
   return (
@@ -206,21 +253,47 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Parameter Glossary</p>
-                  {[
-                    { term: "Concavity", desc: "Measures the severity of dents in the cell boundary." },
-                    { term: "Texture", desc: "Variance in gray-scale values; measures surface roughness." },
-                    { term: "Compactness", desc: "Determines how tight or elongated the cell appears." },
-                    { term: "Smoothness", desc: "Local variation in the cell's radius length." }
-                  ].map((item, i) => (
-                    <div key={i} className="flex gap-3">
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">{item.term}</p>
-                        <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {scanSuccess ? "Scan Insights" : "Parameter Glossary"}
+                  </p>
+                  
+                  {scanSuccess ? (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-start gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-emerald-800 font-medium">Report analyzed. SVM features have been auto-populated based on clinical findings.</p>
                       </div>
+                      {[
+                        { term: "Confidence", desc: "AI extracted features with high correlation to clinical text." },
+                        { term: "Validation", desc: "Values matched against Wisconsin Dataset ranges." }
+                      ].map((item, i) => (
+                        <div key={i} className="wizard-item flex gap-3 p-2">
+                          <div className="w-1 h-1 bg-emerald-400 rounded-full mt-2 shrink-0" />
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-800 uppercase">{item.term}</p>
+                            <p className="text-[10px] text-slate-500 leading-relaxed">{item.desc}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="space-y-4">
+                      {[
+                        { term: "Concavity", desc: "Measures the severity of dents in the cell boundary." },
+                        { term: "Texture", desc: "Variance in gray-scale values; surface roughness." },
+                        { term: "Compactness", desc: "Determines how tight or elongated the cell appears." },
+                        { term: "Smoothness", desc: "Local variation in the cell's radius length." }
+                      ].map((item, i) => (
+                        <div key={i} className="flex gap-3">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(59,130,246,0.5)]" />
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{item.term}</p>
+                            <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -228,6 +301,48 @@ export default function Home() {
 
           {/* Right: Input & Visualization */}
           <div className="lg:col-span-8 grid gap-8">
+            {/* AI Scanner Bar */}
+            <div className={`relative overflow-hidden p-1 rounded-3xl transition-all duration-500 ${isScanning ? 'bg-blue-600' : 'bg-slate-200/50'}`}>
+              <div className="medical-glass p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isScanning ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>
+                    {isScanning ? <ScanSearch className="w-6 h-6 animate-pulse" /> : <Upload className="w-6 h-6" />}
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm uppercase tracking-wider">Intelligent Report Scanner</h3>
+                    <p className="text-xs text-slate-500 font-medium">Upload PDF/Image to auto-populate diagnostic fields.</p>
+                  </div>
+                </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileUpload} 
+                  className="hidden" 
+                  accept="image/*,.pdf"
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isScanning}
+                  className="px-6 py-3 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 group"
+                >
+                  <Sparkles className="w-4 h-4 group-hover:text-blue-400 transition-colors" />
+                  {isScanning ? 'Analyzing Tissue...' : 'Select Report'}
+                </button>
+              </div>
+              {isScanning && (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  <div className="w-full h-1 bg-white/50 absolute top-0 animate-[scan_2s_linear_infinite]" />
+                </div>
+              )}
+            </div>
+
+            {scanError && (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 animate-shake">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p className="text-sm font-bold">{scanError}</p>
+              </div>
+            )}
+
             <div className="medical-glass p-10 rounded-[2.5rem] shadow-2xl shadow-blue-900/5">
               <form onSubmit={handlePredict} className="space-y-8">
                 <div className="grid md:grid-cols-2 gap-6">
