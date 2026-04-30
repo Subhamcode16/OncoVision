@@ -19,7 +19,7 @@ function CellCore() {
   return (
     <Float speed={2.5} rotationIntensity={0.8} floatIntensity={1.5}>
       <mesh ref={meshRef}>
-        <icosahedronGeometry args={[1.8, 20]} />
+        <icosahedronGeometry args={[1.8, 12]} />
         <MeshDistortMaterial
           color="#2563eb"
           speed={4}

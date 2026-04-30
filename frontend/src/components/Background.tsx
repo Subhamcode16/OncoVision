@@ -36,7 +36,7 @@ export default function Background({ variant }: BackgroundProps) {
           <ShaderGradient
             control='props'
             animate='on'
-            type='water'
+            type='plane'
             uTime={0.5}
             uSpeed={0.05}
             uStrength={1.2}

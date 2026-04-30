@@ -2,15 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
 :root {
   --background: #ffffff;
   --foreground: #020617;
-  --primary: #2563eb;
-  --primary-glow: rgba(37, 99, 235, 0.15);
-  --border: rgba(0, 0, 0, 0.08);
-  --card-bg: rgba(255, 255, 255, 0.8);
+  --primary: #2563eb; /* Medical Blue */
+  --primary-glow: rgba(37, 99, 235, 0.05);
+  --border: rgba(0, 0, 0, 0.06);
+  --border-blue: rgba(37, 99, 235, 0.12);
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --text-muted: #64748b;
 }
 
 * {
@@ -19,39 +21,105 @@
   box-sizing: border-box;
 }
 
+/* --- Interactive Typography System --- */
+.text-spotlight {
+  background: radial-gradient(
+    circle at var(--x, 50%) var(--y, 50%),
+    #2563eb 0%,
+    #000000 60%,
+    #000000 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+  background-color: #000000;
+  will-change: background;
+}
+
+/* --- Medical Neumorphism --- */
+.medical-neumorphic {
+  background: #ffffff;
+  box-shadow: 
+    10px 10px 20px #d1d5db,
+    -10px -10px 20px #ffffff;
+  transition: all 0.3s ease;
+}
+
+.medical-neumorphic-emerald {
+  background: #f0fdf4;
+  box-shadow: 
+    8px 8px 16px #dcfce7,
+    -8px -8px 16px #ffffff,
+    inset 2px 2px 5px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(16, 185, 129, 0.1);
+}
+
+.medical-neumorphic-red {
+  background: #fef2f2;
+  box-shadow: 
+    8px 8px 16px #fee2e2,
+    -8px -8px 16px #ffffff,
+    inset 2px 2px 5px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+}
+
+.medical-neumorphic-inset {
+  box-shadow: 
+    inset 6px 6px 12px #d1d5db,
+    inset -6px -6px 12px #ffffff;
+}
+
 body {
   background-color: var(--background) !important;
   color: var(--foreground);
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-  cursor: none;
 }
 
+/* Interactive Reset */
 a, button, input, [role="button"] {
-  cursor: none !important;
+  outline: none;
 }
 
-h1, h2, h3, .font-outfit {
-  font-family: 'Outfit', sans-serif !important;
+/* Typography Overhaul */
+h1, h2, h3, .font-heading {
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.05em !important;
+  line-height: 0.95;
 }
 
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Linear/Vercel Glassmorphism */
 .medical-glass {
   background: var(--card-bg) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
   border: 1px solid var(--border) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.03);
 }
 
+.medical-glass-blue {
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--border-blue) !important;
+  box-shadow: 0 10px 40px -10px var(--primary-glow);
+}
+
+/* Precision Components */
 .input-field {
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 12px;
-  padding: 0.85rem 1.1rem;
-  font-size: 0.95rem;
-  color: #1e293b !important;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--foreground) !important;
+  transition: all 0.2s ease;
   width: 100% !important;
 }
 
@@ -59,59 +127,114 @@ h1, h2, h3, .font-outfit {
   outline: none;
   border-color: var(--primary) !important;
   box-shadow: 0 0 0 4px var(--primary-glow);
-  background: #ffffff !important;
 }
 
-.btn-primary {
-  background: var(--primary) !important;
+/* The "Vercel" Button */
+.btn-vercel {
+  background: var(--foreground) !important;
   color: white !important;
   font-weight: 700 !important;
-  border-radius: 14px;
-  padding: 1rem 2rem;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 10px 20px -10px rgba(37, 99, 235, 0.4);
+  font-size: 0.8125rem;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  gap: 0.5rem;
 }
 
-.btn-primary:hover {
+.btn-vercel:hover {
+  background: #ffffff !important;
+  color: var(--foreground) !important;
+  border-color: var(--foreground) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15);
+}
+
+.btn-medical {
+  background: var(--primary) !important;
+  color: white !important;
+  font-weight: 800 !important;
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 15px 30px -10px rgba(37, 99, 235, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  gap: 0.75rem;
+  border: none;
+}
+
+.btn-medical:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 30px -10px rgba(37, 99, 235, 0.6);
-  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+  filter: brightness(1.05);
 }
 
-.section-container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 2rem;
+/* GSAP Reveal States */
+.gsap-reveal {
+  will-change: transform, opacity;
 }
 
-@keyframes scan {
-  from { top: 0%; opacity: 0; }
-  50% { opacity: 1; }
-  to { top: 100%; opacity: 0; }
+.tech-card, .gsap-reveal, .hero-title, .hero-desc, .hero-btns {
+  will-change: transform, opacity, filter;
 }
 
-.animate-scan {
+
+
+/* Scanning Animation Refined */
+@keyframes scan-neural {
+  0% { transform: translateY(-100%); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(500%); opacity: 0; }
+}
+
+.animate-scan-neural {
   position: absolute;
   left: 0;
   width: 100%;
-  height: 2px;
-  background: linear-gradient(to right, transparent, var(--primary), transparent);
-  box-shadow: 0 0 15px var(--primary);
-  animation: scan 2s linear infinite;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, var(--primary), transparent);
+  opacity: 0.4;
+  animation: scan-neural 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   z-index: 20;
+  pointer-events: none;
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+/* Section Spacing */
+.section-padding {
+  padding-top: 160px;
+  padding-bottom: 160px;
 }
 
-.animate-shake {
-  animation: shake 0.5s ease-in-out;
+.section-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.benign-line, .malignant-line {
+  will-change: opacity, transform;
 }
