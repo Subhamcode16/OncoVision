@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import joblib
 import numpy as np
@@ -10,7 +10,11 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from google import genai
 import json
+import re
+import logging
+import base64
 from dotenv import load_dotenv
+from pydantic import Field
 
 load_dotenv()
 
@@ -19,6 +23,14 @@ limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="OncoVision AI Backend")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Setup Audit Logger
+logging.basicConfig(
+    filename="scanner_audit.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("oncovision")
 
 # Configure Gemini
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -58,14 +70,26 @@ except Exception as e:
     print(f"WARNING: Could not load models on startup: {e}")
 
 class PatientData(BaseModel):
-    radius_mean: float
-    texture_mean: float
-    perimeter_mean: float
-    area_mean: float
-    smoothness_mean: float
-    compactness_mean: float
-    concavity_mean: float
-    concave_points_mean: float
+    radius_mean: float = Field(..., gt=0, description="Mean of distances from center to points on the perimeter")
+    texture_mean: float = Field(..., gt=0, description="Standard deviation of gray-scale values")
+    perimeter_mean: float = Field(..., gt=0)
+    area_mean: float = Field(..., gt=0)
+    smoothness_mean: float = Field(..., gt=0)
+    compactness_mean: float = Field(..., gt=0)
+    concavity_mean: float = Field(..., ge=0)
+    concave_points_mean: float = Field(..., ge=0)
+
+def resilient_json_parse(text: str):
+    """Recovers JSON from AI text even if surrounded by conversational filler."""
+    try:
+        # 1. Try direct parse
+        return json.loads(text.strip())
+    except json.JSONDecodeError:
+        # 2. Try to find JSON block via regex
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+    raise ValueError("No valid JSON found in AI response")
 
 @app.post("/predict")
 async def predict(data: PatientData):
@@ -121,7 +145,7 @@ async def predict(data: PatientData):
 
 @app.post("/api/scan-report")
 @limiter.limit("5/minute")
-async def scan_report(file: UploadFile = File(...)):
+async def scan_report(request: Request, file: UploadFile = File(...)):
     """
     Scans a medical report using Gemini 1.5 Flash and extracts SVM features.
     """
@@ -136,58 +160,96 @@ async def scan_report(file: UploadFile = File(...)):
         client = genai.Client(api_key=GEMINI_API_KEY)
         
         prompt = """
-        You are a clinical oncology data extractor. Analyze the attached medical report.
+        ACT AS: A Senior Medical Pathologist and Expert Vision OCR Engine.
         
-        TASK:
-        1. Determine if this is a breast pathology, FNA, or biopsy report.
-        2. If it is NOT a breast cancer related report (e.g., blood test, vitamin test), return: {"error": "not_oncology_report"}
-        3. If it IS a breast cancer report, extract or estimate the following 8 features based on the descriptive text.
-           Map the textual descriptions (e.g., 'small nuclei' vs 'large pleomorphic nuclei') to the typical ranges for the Wisconsin Breast Cancer Dataset.
+        INPUT: A medical report (possibly a camera photo with shadows, skew, or noise).
         
-        FIELDS TO EXTRACT:
-        - radius_mean (Typical range: 6.0 to 28.0)
-        - texture_mean (Typical range: 9.0 to 39.0)
-        - perimeter_mean (Typical range: 43.0 to 188.0)
-        - area_mean (Typical range: 143.0 to 2501.0)
-        - smoothness_mean (Typical range: 0.05 to 0.16)
-        - compactness_mean (Typical range: 0.01 to 0.34)
-        - concavity_mean (Typical range: 0.0 to 0.42)
-        - concave_points_mean (Typical range: 0.0 to 0.20)
+        VISION INSTRUCTIONS:
+        1. Ignore shadows, background hands/desks, and skewed perspectives.
+        2. Perform deep OCR on all visible clinical text, focusing on 'Microscopic Description' and 'Impression'.
+        3. If the image is unreadable (too blurry/dark), return: {"error": "low_resolution"}
+        
+        CLINICAL VALIDATION:
+        1. Verify if this is a breast-related pathology/FNA/Biopsy report.
+        2. If NOT breast cancer related, return: {"error": "not_oncology_report"}
+        
+        FEATURE EXTRACTION:
+        Extract or intelligently estimate the following 8 features based on the cytological descriptions:
+        - radius_mean (6.0 to 28.0)
+        - texture_mean (9.0 to 39.0)
+        - perimeter_mean (43.0 to 188.0)
+        - area_mean (143.0 to 2501.0)
+        - smoothness_mean (0.05 to 0.16)
+        - compactness_mean (0.01 to 0.34)
+        - concavity_mean (0.0 to 0.42)
+        - concave_points_mean (0.0 to 0.20)
+        
+        MAPPING LOGIC: 
+        - 'Mild pleomorphism' -> Low-Mid range.
+        - 'Marked atypia/Irregular chromatin' -> High range.
+        - 'Smooth borders' -> Low range.
         
         Return ONLY a JSON object.
-        Example: {"radius_mean": 14.5, "texture_mean": 20.1, ...}
         """
 
-        # Generate content using the new SDK pattern
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[
-                prompt,
-                {"mime_type": file.content_type, "data": contents}
-            ]
-        )
+        # In the modern Unified SDK, inline data must be base64 encoded
+        encoded_content = base64.b64encode(contents).decode("utf-8")
+
+        # Model Waterfall Strategy (Resilience against 429/404 errors)
+        models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+        response = None
+        last_error = ""
+
+        for model_name in models_to_try:
+            try:
+                logger.info(f"Attempting scan with {model_name}...")
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[
+                        prompt,
+                        {
+                            "inline_data": {
+                                "mime_type": file.content_type,
+                                "data": encoded_content
+                            }
+                        }
+                    ]
+                )
+                if response:
+                    logger.info(f"Successfully used {model_name}")
+                    break
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"Model {model_name} failed: {last_error}")
+                continue
+        
+        if not response:
+            return {"success": False, "error_type": f"Quota Exhausted: All models are currently unavailable. Last Error: {last_error}"}
+
+        # Modern Response Handling (handling safety blocks or empty candidates)
+        if not response.candidates or not response.candidates[0].content.parts:
+            logger.warning(f"AI Blocked/Empty Response | File: {file.filename}")
+            return {"success": False, "error_type": "The AI safety filter blocked this report. Please ensure it is a valid medical document."}
         
         try:
-            # Extract JSON from response text (handle markdown code blocks if any)
-            text_response = response.text
-            if "```json" in text_response:
-                text_response = text_response.split("```json")[1].split("```")[0]
-            elif "```" in text_response:
-                text_response = text_response.split("```")[1].split("```")[0]
-            
-            extracted_data = json.loads(text_response.strip())
+            ai_text = response.text
+            extracted_data = resilient_json_parse(ai_text)
             
             if "error" in extracted_data:
-                return {"success": False, "error": extracted_data["error"]}
+                logger.warning(f"Scan Rejected: {extracted_data['error']} | File: {file.filename}")
+                return {"success": False, "error_type": extracted_data["error"]}
                 
+            logger.info(f"Scan Successful: {file.filename}")
             return {"success": True, "data": extracted_data}
             
-        except Exception as json_err:
-            print(f"AI Response parsing error: {json_err} | Raw: {response.text}")
-            raise HTTPException(status_code=500, detail="Failed to parse AI response.")
+        except Exception as parse_err:
+            logger.error(f"AI Parse Error: {parse_err} | Raw: {response.text}")
+            return {"success": False, "error_type": "The AI response was malformed. Please try again with a clearer image."}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Scanning error: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Scanner System Error: {error_msg}")
+        return {"success": False, "error_type": f"System Alert: {error_msg}"}
 
 @app.get("/health")
 async def health():

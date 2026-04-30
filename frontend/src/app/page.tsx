@@ -124,11 +124,13 @@ export default function Home() {
         setScanSuccess(true);
         gsap.from('.wizard-item', { x: -20, opacity: 0, stagger: 0.1, duration: 0.5 });
       } else {
-        if (result.error === 'not_oncology_report') {
-          setScanError('This report does not appear to be a breast cancer pathology/FNA report. Please upload a valid oncology document.');
-        } else {
-          setScanError('Failed to parse the report. Please ensure the image is clear.');
-        }
+        // Map backend error_type to user-friendly messages
+        const errorMap: Record<string, string> = {
+          'not_oncology_report': 'Clinical Validation Failed: This document does not appear to be an oncology/FNA report.',
+          'low_resolution': 'Image Quality Alert: The report text is too blurry to extract precise metrics.',
+          'unsupported_format': 'Format Error: Please provide the report as a clear Image or PDF.'
+        };
+        setScanError(errorMap[result.error_type] || result.error_type || 'Diagnostic Error: The AI encountered an issue parsing this report.');
       }
     } catch (error) {
       setScanError('Server connection lost. Please check if the backend is running.');
@@ -367,14 +369,18 @@ export default function Home() {
                             {translations[key]}
                           </span>
                         </div>
-                        <input
-                          type="number"
-                          step="any"
-                          value={formData[key as keyof typeof formData]}
-                          onChange={(e) => handleChange(key, e.target.value)}
-                          className="input-field"
-                          required
-                        />
+                        {isScanning ? (
+                          <div className="w-full h-[54px] bg-slate-100 rounded-2xl animate-pulse border border-slate-200" />
+                        ) : (
+                          <input
+                            type="number"
+                            step="any"
+                            value={formData[key as keyof typeof formData]}
+                            onChange={(e) => handleChange(key, e.target.value)}
+                            className="input-field"
+                            required
+                          />
+                        )}
                       </div>
                     );
                   })}
