@@ -40,7 +40,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Enable CORS for Production and Localhost
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 # On Render, we usually allow all subdomains of onrender.com
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*.onrender.com,localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*.onrender.com,localhost,127.0.0.1").split(",")]
 
 app.add_middleware(
     CORSMiddleware,
