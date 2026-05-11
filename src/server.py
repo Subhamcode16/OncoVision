@@ -39,11 +39,12 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Enable CORS for Production and Localhost
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# On Render, we usually allow all subdomains of onrender.com
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*.onrender.com,localhost,127.0.0.1").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000"],
+    allow_origins=[FRONTEND_URL, "http://localhost:3000", "*.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +52,20 @@ app.add_middleware(
 
 # Security Middleware (Enable Trusted Hosts)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+
+# Enforce HTTPS in production
+if os.getenv("ENV") == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
+
+@app.get("/health")
+async def health_check():
+    """Endpoint for Render to verify service health."""
+    return {
+        "status": "healthy",
+        "model_loaded": model is not None,
+        "scaler_loaded": scaler is not None,
+        "threshold": metadata.get("threshold", 0.5)
+    }
 
 # Security Headers Middleware
 @app.middleware("http")
