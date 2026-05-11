@@ -40,11 +40,18 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Enable CORS for Production and Localhost
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 # On Render, we usually allow all subdomains of onrender.com
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*.onrender.com,localhost,127.0.0.1").split(",")]
+# Host validation - Broadened for Render reliability
+ALLOWED_HOSTS = ["*"]
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
+# Enforce HTTPS in production
+if os.getenv("ENV") == "production" or os.getenv("RENDER") == "true":
+    app.add_middleware(HTTPSRedirectMiddleware)
+
+# Enable CORS - Moved to outer layer (added last) to ensure errors have CORS headers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
+    allow_origins=["*"] if os.getenv("RENDER") == "true" else [
         FRONTEND_URL, 
         "http://localhost:3000", 
         "https://oncovision-ai-ochre.vercel.app",
@@ -65,12 +72,7 @@ async def root():
         "health": "/health"
     }
 
-# Security Middleware (Enable Trusted Hosts)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
-
-# Enforce HTTPS in production
-if os.getenv("ENV") == "production":
-    app.add_middleware(HTTPSRedirectMiddleware)
+# Middlewares are now configured above in the correct order
 
 @app.get("/health")
 async def health_check():
