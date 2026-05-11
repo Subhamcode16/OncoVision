@@ -44,7 +44,7 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*.onrender.com,localhost,127.0.0.1")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000", "*.vercel.app"],
+    allow_origins=[FRONTEND_URL, "http://localhost:3000", "https://oncovision-ai-ochre.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

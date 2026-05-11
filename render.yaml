@@ -8,8 +8,8 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: FRONTEND_URL
-        value: https://oncovision-ai.vercel.app # Placeholder, update after Vercel deploy
+        value: https://oncovision-ai-ochre.vercel.app
       - key: ALLOWED_HOSTS
-        value: .render.com,oncovision-backend.onrender.com,localhost,127.0.0.1
+        value: .onrender.com,oncovision-backend.onrender.com,localhost,127.0.0.1
       - key: PORT
         value: 8000
