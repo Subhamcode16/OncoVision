@@ -257,15 +257,15 @@ async def scan_report(request: Request, file: UploadFile = File(...)):
         2. If NOT breast cancer related, return: {"error": "not_oncology_report"}
         
         FEATURE EXTRACTION:
-        Extract or intelligently estimate the following 8 features based on the cytological descriptions:
-        - radius_mean (6.0 to 28.0)
-        - texture_mean (9.0 to 39.0)
-        - perimeter_mean (43.0 to 188.0)
-        - area_mean (143.0 to 2501.0)
-        - smoothness_mean (0.05 to 0.16)
-        - compactness_mean (0.01 to 0.34)
-        - concavity_mean (0.0 to 0.42)
-        - concave_points_mean (0.0 to 0.20)
+        Extract or intelligently estimate the following 8 EXACT keys based on the cytological descriptions:
+        - radius_mean: (Range 6.0 to 28.0)
+        - texture_mean: (Range 9.0 to 39.0)
+        - perimeter_mean: (Range 43.0 to 188.0)
+        - area_mean: (Range 143.0 to 2501.0)
+        - smoothness_mean: (Range 0.05 to 0.16)
+        - compactness_mean: (Range 0.01 to 0.34)
+        - concavity_mean: (Range 0.0 to 0.42)
+        - concave_points_mean: (Range 0.0 to 0.20) [MANDATORY: Map 'nucleolar prominence', 'atypical mitoses', or 'Clinical Mean' here if numeric value missing]
         
         MAPPING LOGIC: 
         - 'Mild pleomorphism' -> Low-Mid range.
@@ -276,7 +276,7 @@ async def scan_report(request: Request, file: UploadFile = File(...)):
         Add a field 'clinical_insight' (string, max 15 words) explaining the most concerning or reassuring feature found.
         Example: "Large cell area and irregular borders suggest active cellular proliferation."
 
-        Return ONLY a JSON object.
+        Return ONLY a JSON object with these exact keys.
         """
 
         # In the modern Unified SDK, inline data must be base64 encoded

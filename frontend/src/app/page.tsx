@@ -168,37 +168,55 @@ export default function Home() {
     });
   };
 
-  const handlePredict = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runInference = async (dataToUse: typeof formData) => {
     setLoading(true);
-    setIsScanning(true);
     setResult(null);
 
-    // Simulate "Cinematic Scan" timing
-    setTimeout(async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiUrl}/predict`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
-        const data = await response.json();
-        setResult(data);
-        
-        const diagnosis = data.diagnosis.toLowerCase();
-        if (diagnosis.includes('malignant')) setBgVariant('malignant');
-        else if (diagnosis.includes('benign')) setBgVariant('benign');
-        else setBgVariant('normal');
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToUse),
+      });
+      const data = await response.json();
+      setResult(data);
+      
+      const diagnosis = data.diagnosis.toLowerCase();
+      if (diagnosis.includes('malignant')) setBgVariant('malignant');
+      else if (diagnosis.includes('benign')) setBgVariant('benign');
+      else setBgVariant('normal');
 
-        gsap.from('.verdict-reveal', { y: 30, opacity: 0, duration: 0.8, ease: 'back.out(1.7)' });
-      } catch (error) {
-        console.error('Error:', error);
-      } finally {
-        setLoading(false);
-        setIsScanning(false);
-      }
-    }, 2000); // Cinematic delay
+      // Scroll to result and animate
+      setTimeout(() => {
+        if (appRef.current) {
+          gsap.to(window, { 
+            duration: 1.5, 
+            scrollTo: { y: '.verdict-reveal', offsetY: 100 }, 
+            ease: 'power4.inOut' 
+          });
+        }
+        gsap.fromTo('.verdict-reveal', 
+          { y: 50, opacity: 0 }, 
+          { y: 0, opacity: 1, duration: 1, ease: 'expo.out' }
+        );
+      }, 100);
+
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+      setIsScanning(false);
+    }
+  };
+
+  const handlePredict = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsScanning(true);
+    // Simulate "Cinematic Scan" timing if triggered manually
+    setTimeout(() => {
+      runInference(formData);
+    }, 1500);
   };
 
   const handleChange = (key: string, value: string) => {
@@ -245,12 +263,16 @@ export default function Home() {
         
         // Brief delay to show 100% completion before popup
         setTimeout(() => {
-          setFormData(prev => ({ ...prev, ...result.data }));
+          const extractedData = { ...formData, ...result.data };
+          setFormData(extractedData);
           setScanInsight(result.data.clinical_insight || null);
           setScanSuccess(true);
           setShowSuccessPopup(true);
           gsap.from('.wizard-item', { x: -20, opacity: 0, stagger: 0.1, duration: 0.5 });
           
+          // Auto-trigger prediction
+          runInference(extractedData);
+
           // Auto-hide popup after 3 seconds
           setTimeout(() => setShowSuccessPopup(false), 3000);
         }, 500);
@@ -560,13 +582,13 @@ export default function Home() {
                       smoothness_mean: 'Edge Smoothness',
                       compactness_mean: 'Cell Density',
                       concavity_mean: 'Shape Severity',
-                      concave_points_mean: 'Contour Points'
+                      concave_points_mean: 'Concave Points'
                     };
                     return (
                       <div key={key} className="space-y-2 group">
                         <div className="flex justify-between items-center px-1">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-focus-within:text-blue-600 transition-colors">
-                            {key.split('_')[0]} Mean
+                            {key === 'concave_points_mean' ? 'Clinical' : key.split('_')[0]} Mean
                           </label>
                           <span className="text-[9px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">
                             {translations[key]}
