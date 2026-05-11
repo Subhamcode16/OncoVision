@@ -56,6 +56,7 @@ export default function Home() {
     concavity_mean: '0.3001',
     concave_points_mean: '0.1471'
   });
+  const [scanInsight, setScanInsight] = useState<string | null>(null);
 
   const pageRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -245,6 +246,7 @@ export default function Home() {
         // Brief delay to show 100% completion before popup
         setTimeout(() => {
           setFormData(prev => ({ ...prev, ...result.data }));
+          setScanInsight(result.data.clinical_insight || null);
           setScanSuccess(true);
           setShowSuccessPopup(true);
           gsap.from('.wizard-item', { x: -20, opacity: 0, stagger: 0.1, duration: 0.5 });
@@ -652,6 +654,18 @@ export default function Home() {
                 <p className="text-slate-500 font-bold text-xs uppercase tracking-widest opacity-60">
                   Morphological Signature Analysis Complete
                 </p>
+                
+                {scanInsight && (
+                  <div className="mt-6 p-4 bg-white/30 backdrop-blur-sm rounded-2xl border border-white/40 max-w-md">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+                      <Sparkles className="w-3 h-3 text-blue-500" />
+                      AI Scanner Observation
+                    </p>
+                    <p className="text-sm text-slate-700 font-medium italic leading-relaxed">
+                      "{scanInsight}"
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div className="flex-1 w-full max-w-sm">
@@ -663,9 +677,20 @@ export default function Home() {
                   <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border ${
                     result.diagnosis === 'Malignant' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
                   }`}>
-                    {result.confidence > 95 ? 'High Precision' : 'Standard Precision'}
+                    {result.confidence > 95 ? 'Highly Probable' : 'Standard Precision'}
                   </div>
                 </div>
+
+                {result.recommendation && (
+                  <div className="mb-4 flex items-start gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                      result.diagnosis === 'Malignant' ? 'bg-red-500' : 'bg-emerald-500'
+                    }`} />
+                    <p className="text-[10px] font-bold text-slate-800 uppercase leading-relaxed tracking-wide">
+                      {result.recommendation}
+                    </p>
+                  </div>
+                )}
                 
                 <div className="h-4 w-full bg-white/50 rounded-full p-1 border border-white/80 shadow-inner">
                   <div 

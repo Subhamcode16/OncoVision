@@ -204,12 +204,19 @@ async def predict(data: PatientData):
         
         # Confidence is the probability of the predicted class
         confidence = probabilities[prediction_code] * 100
+
+        # Simple Recommendation Logic (Step 6)
+        recommendations = {
+            0: "Urgent: Oncological consultation and confirmatory biopsy strongly advised.",
+            1: "Monitor: Routine clinical follow-up suggested as per standard protocol."
+        }
         
         return {
             "diagnosis": diagnosis,
             "confidence": round(float(confidence), 2),
             "prediction_code": int(prediction_code),
             "threshold_used": threshold,
+            "recommendation": recommendations.get(prediction_code, "Consult with your physician."),
             "probabilities": {
                 "malignant": round(float(probabilities[0] * 100), 2),
                 "benign": round(float(probabilities[1] * 100), 2)
@@ -265,6 +272,10 @@ async def scan_report(request: Request, file: UploadFile = File(...)):
         - 'Marked atypia/Irregular chromatin' -> High range.
         - 'Smooth borders' -> Low range.
         
+        INSIGHT GENERATION:
+        Add a field 'clinical_insight' (string, max 15 words) explaining the most concerning or reassuring feature found.
+        Example: "Large cell area and irregular borders suggest active cellular proliferation."
+
         Return ONLY a JSON object.
         """
 
