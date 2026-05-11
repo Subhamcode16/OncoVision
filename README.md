@@ -32,11 +32,12 @@ Breast cancer is the most common cancer among women worldwide. However, medical 
 
 ```mermaid
 graph TD
-    A[Training Pipeline (Notebook)] -- "Export .joblib + metadata.json" --> B[Local Models Folder]
-    B -- "Load artifacts" --> C[FastAPI Backend]
-    D[Next.js Dashboard] -- "POST /predict" --> C
-    C -- "Diagnosis + Confidence + SHAP" --> D
-    D -- "Patient-Friendly View" --> E[End User]
+    A["Training Pipeline (Notebook)"] -- "Export .joblib + metadata.json" --> B["Local Models Folder"]
+    B -- "CI/CD Push" --> C["GitHub Repository"]
+    C -- "Auto-Deploy" --> D["Render Backend (FastAPI)"]
+    E["Next.js Dashboard (Vercel)"] -- "POST /predict" --> D
+    D -- "Diagnosis + Confidence + SHAP" --> E
+    E -- "Patient-Friendly View" --> F["End User"]
 ```
 
 ---
@@ -44,11 +45,11 @@ graph TD
 ## 🛠️ Tech Stack
 | Category | Technology |
 | :--- | :--- |
-| **Machine Learning** | Scikit-Learn, SVM, XGBoost, SHAP |
-| **Generative AI** | Google Gemini 2.5 Flash (via google-genai SDK) |
-| **Backend** | FastAPI, Python 3.12, Joblib, CalibratedClassifierCV |
-| **Frontend** | Next.js 15 (App Router), TypeScript, Vanilla CSS, GSAP |
-| **Deployment** | Local-First (Production Optimized) |
+| **Machine Learning** | Scikit-Learn, Calibrated SVM, Joblib |
+| **Generative AI** | Google Gemini 2.5 Flash |
+| **Backend** | FastAPI (Render) |
+| **Frontend** | Next.js 15, TypeScript, GSAP (Vercel) |
+| **Production URLs** | [Live Dashboard](https://oncovision-ai-ochre.vercel.app) \| [API Health](https://oncovision-backend.onrender.com/health) |
 
 ---
 

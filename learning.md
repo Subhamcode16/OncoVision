@@ -49,3 +49,21 @@
 - **Pre-Layout Synchronization:** Discovered that complex layout engines like `pretext` must finish their calculations before GSAP `ScrollTrigger` measures the DOM, otherwise triggers will fire at incorrect scroll positions.
 - **SVG Stroke Scaling:** When using `preserveAspectRatio="none"` on an SVG, the `strokeWidth` can become distorted if the container is stretched. Learned to use `vector-effect: non-scaling-stroke` or carefully fixed aspect ratios for consistent line weights.
 - **User-Centric Refinement:** Learned that "graceful" usually means slower deceleration (`expo.out`) and slightly longer durations (1.0s+) compared to the snappy defaults used in generic SaaS apps.
+
+---
+
+## Date: May 12, 2026
+
+### 🚀 Key Accomplishments
+1.  **Probability Calibration (Platt Scaling):** Solved the "binary collapse" issue where the raw SVM was returning unscaled 1.0 or 0.0 scores. Integrated **`CalibratedClassifierCV`** to provide smooth, clinically reliable probabilities.
+2.  **Recall Optimization (97.6%):** Standardized the diagnostic threshold at **0.43** via `model_metadata.json`, prioritizing high-recall malignancy detection to minimize life-threatening false negatives.
+3.  **Production Orchestration:** Successfully deployed the dual-cloud architecture:
+    *   **Backend (Render):** FastAPI with gunicorn/uvicorn, dynamic CORS, and trusted host security.
+    *   **Frontend (Vercel):** Next.js 15 via Vercel CLI with custom security headers and auto-aliasing.
+4.  **Security Handening:** Implemented a secure `.env` protocol and synchronized production keys across the environment without hardcoding.
+
+### 🧠 Lessons Learned
+- **The Calibration Requirement:** Learned that raw SVM `decision_function` outputs are not probabilities. For medical applications, `predict_proba()` must be backed by a calibration layer (Isotonic or Platt) to be interpretable by users.
+- **Render Resource Management:** Render's Free Tier has strict memory limits (512MB). Removed heavy dependencies like `tensorflow` to ensure the SVM engine remains lightweight and fast.
+- **Deployment Sync:** Learned that maintaining a separate `frontend/` directory requires careful path management in the Vercel CLI to ensure the root directory is correctly identified during build.
+- **Dynamic Thresholding:** Decoupling the model threshold from the code (via `model_metadata.json`) allows for rapid "recall vs precision" tuning in production without redeploying the entire backend.
