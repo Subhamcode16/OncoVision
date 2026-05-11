@@ -300,9 +300,6 @@ async def scan_report(request: Request, file: UploadFile = File(...)):
         logger.error(f"Scanner System Error: {error_msg}")
         return {"success": False, "error_type": f"System Alert: {error_msg}"}
 
-@app.get("/health")
-async def health():
-    return {"status": "healthy", "model_loaded": model is not None}
 
 if __name__ == "__main__":
     import uvicorn
