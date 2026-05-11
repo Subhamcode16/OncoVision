@@ -44,11 +44,26 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*.onrender.com,localhost,127.0.0.1")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000", "https://oncovision-ai-ochre.vercel.app"],
+    allow_origins=[
+        FRONTEND_URL, 
+        "http://localhost:3000", 
+        "https://oncovision-ai-ochre.vercel.app",
+        "https://oncovision-ai.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    """Root endpoint to satisfy Render health checks and verify deployment."""
+    return {
+        "message": "OncoVision AI Backend is Online",
+        "version": "2.0.4",
+        "documentation": "/docs",
+        "health": "/health"
+    }
 
 # Security Middleware (Enable Trusted Hosts)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
@@ -59,12 +74,22 @@ if os.getenv("ENV") == "production":
 
 @app.get("/health")
 async def health_check():
-    """Endpoint for Render to verify service health."""
+    """Endpoint for Render to verify service health and list available AI models."""
+    available_models = []
+    try:
+        if GEMINI_API_KEY:
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            for m in client.models.list():
+                available_models.append(m.name)
+    except Exception as e:
+        available_models = [f"Error listing models: {str(e)}"]
+
     return {
         "status": "healthy",
         "model_loaded": model is not None,
         "scaler_loaded": scaler is not None,
-        "threshold": metadata.get("threshold", 0.5)
+        "threshold": metadata.get("threshold", 0.5),
+        "available_ai_models": available_models
     }
 
 # Security Headers Middleware
@@ -245,7 +270,15 @@ async def scan_report(request: Request, file: UploadFile = File(...)):
         encoded_content = base64.b64encode(contents).decode("utf-8")
 
         # Model Waterfall Strategy (Resilience against 429/404 errors)
-        models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+        # Model Waterfall Strategy (Resilience against 429/404 errors)
+        # Using a broader range of models to ensure availability in cloud environments
+        models_to_try = [
+            'gemini-2.0-flash', 
+            'gemini-1.5-flash', 
+            'gemini-1.5-flash-8b', 
+            'gemini-1.5-pro',
+            'gemini-2.0-flash-exp'
+        ]
         response = None
         last_error = ""
 

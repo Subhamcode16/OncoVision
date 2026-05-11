@@ -260,7 +260,15 @@ export default function Home() {
           'low_resolution': 'Image Quality Alert: The report text is too blurry to extract precise metrics.',
           'unsupported_format': 'Format Error: Please provide the report as a clear Image or PDF.'
         };
-        setScanError(errorMap[result.error_type] || result.error_type || 'Diagnostic Error: The AI encountered an issue parsing this report.');
+        
+        let errorMessage = result.error_type || 'Diagnostic Error: The AI encountered an issue parsing this report.';
+        if (errorMessage.includes('Quota Exhausted')) {
+          errorMessage = 'System Busy: AI diagnostic limits reached for this minute. Please retry in 60 seconds.';
+        } else if (errorMessage.includes('System Alert')) {
+          errorMessage = 'Cloud Bridge Latency: The AI service is responding slowly. Please try again.';
+        }
+        
+        setScanError(errorMap[result.error_type] || errorMessage);
       }
     } catch (error) {
       clearInterval(progressInterval);
