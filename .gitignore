@@ -39,4 +39,12 @@ Thumbs.db
 # Environment
 .env
 *.log
+
+# Custom Exclusions
 scratch/
+scripts/
+oncovision_bundle/
+oncovision_bundle.zip
+oncovision_models/
+oncovision_models.zip
+presentation/

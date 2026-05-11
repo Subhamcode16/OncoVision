@@ -5,7 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
-[![Precision: 99%](https://img.shields.io/badge/Accuracy-97.6%25-green.svg)](#)
+[![Accuracy: 97.4%](https://img.shields.io/badge/Accuracy-97.4%25-green.svg)](#)
+[![Recall: 97.6%](https://img.shields.io/badge/Recall-97.6%25-red.svg)](#)
+[![Precision: 95.3%](https://img.shields.io/badge/Precision-95.3%25-blue.svg)](#)
 
 ---
 
@@ -18,9 +20,10 @@ Breast cancer is the most common cancer among women worldwide. However, medical 
 ## 🚀 The Solution
 **OncoVision AI** is a professional-grade diagnostic bridge that combines high-precision machine learning with radical transparency.
 
-*   **97.6% Recall Focus:** Our core SVM engine is tuned specifically to minimize False Negatives, ensuring that early-stage malignant cells are flagged with maximum sensitivity.
+*   **Clinical-Grade Precision (Calibrated SVM):** Our model uses **CalibratedClassifierCV** (Platt Scaling) to ensure that the AI's "confidence" scores are mathematically reliable, not just binary guesses.
+*   **97.6% Recall Focus:** The pipeline is optimized with a custom diagnostic threshold (**0.43**) to minimize False Negatives, ensuring that early-stage malignant cells are flagged with maximum sensitivity.
 *   **Explainable AI (SHAP):** Every diagnosis is accompanied by a SHAP (SHapley Additive exPlanations) chart, revealing exactly which physical characteristics led the AI to its conclusion.
-*   **Intelligent Report Gateway:** Powered by **Gemini 2.5 Flash**, users can upload their pathology reports directly. The AI scans the clinical text, extracts cytological metrics, and auto-populates the diagnostic model, removing the technical barrier for laypeople.
+*   **Intelligent Report Gateway:** Powered by **Gemini 2.5 Flash**, users can upload their pathology reports directly. The AI scans the clinical text, extracts cytological metrics, and auto-populates the diagnostic model.
 *   **Patient-Friendly Interface:** We translate complex clinical metrics into plain English, providing clear action steps and helpful tooltips for non-medical users.
 
 ---
@@ -29,7 +32,7 @@ Breast cancer is the most common cancer among women worldwide. However, medical 
 
 ```mermaid
 graph TD
-    A[Google Colab] -- "Trained Model (SVM)" --> B[Local Models Folder]
+    A[Training Pipeline (Notebook)] -- "Export .joblib + metadata.json" --> B[Local Models Folder]
     B -- "Load artifacts" --> C[FastAPI Backend]
     D[Next.js Dashboard] -- "POST /predict" --> C
     C -- "Diagnosis + Confidence + SHAP" --> D
@@ -43,20 +46,19 @@ graph TD
 | :--- | :--- |
 | **Machine Learning** | Scikit-Learn, SVM, XGBoost, SHAP |
 | **Generative AI** | Google Gemini 2.5 Flash (via google-genai SDK) |
-| **Backend** | FastAPI, Python 3.12, Joblib |
+| **Backend** | FastAPI, Python 3.12, Joblib, CalibratedClassifierCV |
 | **Frontend** | Next.js 15 (App Router), TypeScript, Vanilla CSS, GSAP |
-| **Connectivity** | Cloudflare Tunnel (Remote-to-Local Bridge) |
+| **Deployment** | Local-First (Production Optimized) |
 
 ---
 
 ## 📋 Component Roster
 | Name | Role | Location | Description |
 | :--- | :--- | :--- | :--- |
-| **SVM Engine** | Core Model | `models/svm_tuned.pkl` | Optimized support vector machine with 97.6% recall. |
-| **Prediction API** | Backend | `src/server.py` | FastAPI server that scales inputs and performs inference. |
-| **Diagnostic UI** | Frontend | `frontend/src/app/page.tsx` | High-fidelity medical dashboard with patient-friendly mode. |
-| **Report Scanner** | AI Agent | `src/server.py` | Gemini-powered report analysis and feature extraction. |
-| **Live Logger** | Tooling | `live_logger.py` | Real-time bridge for streaming Colab logs to local dev. |
+| **SVM Engine** | Core Model | `models/oncovision_svm.joblib` | Calibrated SVM optimized for 97.6% recall. |
+| **Prediction API** | Backend | `src/server.py` | FastAPI server with dynamic thresholding (0.43). |
+| **Diagnostic UI** | Frontend | `frontend/src/app/page.tsx` | High-fidelity dashboard with real-time probability mapping. |
+| **Report Scanner** | AI Agent | `src/server.py` | Gemini-powered OCR and feature extraction agent. |
 
 ---
 

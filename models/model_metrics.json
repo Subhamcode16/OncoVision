@@ -1,0 +1,23 @@
+{
+    "SVM_Optimized": {
+        "Accuracy": 0.3684,
+        "Recall_Malignant": 1.0,
+        "Precision_Malignant": 0.3684,
+        "AUC_ROC": 0.9848,
+        "Optimal_Threshold": 0.3
+    },
+    "Random_Forest": {
+        "Accuracy": 0.9474,
+        "Recall_Malignant": 0.9286,
+        "Precision_Malignant": 0.9286,
+        "AUC_ROC": 0.994,
+        "Optimal_Threshold": 0.5
+    },
+    "XGBoost": {
+        "Accuracy": 0.9298,
+        "Recall_Malignant": 0.9286,
+        "Precision_Malignant": 0.8864,
+        "AUC_ROC": 0.9868,
+        "Optimal_Threshold": 0.5
+    }
+}

@@ -176,7 +176,8 @@ export default function Home() {
     // Simulate "Cinematic Scan" timing
     setTimeout(async () => {
       try {
-        const response = await fetch('http://localhost:8000/predict', {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${apiUrl}/predict`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
@@ -229,7 +230,8 @@ export default function Home() {
     }, 50);
 
     try {
-      const response = await fetch('http://localhost:8000/api/scan-report', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/scan-report`, {
         method: 'POST',
         body: formDataUpload,
       });

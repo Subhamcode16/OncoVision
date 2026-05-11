@@ -13,6 +13,8 @@ import json
 import re
 import logging
 import base64
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from dotenv import load_dotenv
 from pydantic import Field
 
@@ -35,25 +37,43 @@ logger = logging.getLogger("oncovision")
 # Configure Gemini
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Enable CORS for Next.js frontend
+# Enable CORS for Production and Localhost
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[FRONTEND_URL, "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Model paths
-SCALER_PATH = "models/scaler.pkl"
-MODEL_PATH = "models/svm_tuned.pkl"
+# Security Middleware (Enable Trusted Hosts)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
-# Global variables for model and scaler
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+# Model paths
+SCALER_PATH = "models/scaler.joblib"
+MODEL_PATH = "models/oncovision_svm.joblib"
+METADATA_PATH = "models/model_metadata.json"
+
+# Global variables
 model = None
 scaler = None
+metadata = {}
 
 def load_artifacts():
-    global model, scaler
+    global model, scaler, metadata
     if not os.path.exists(SCALER_PATH):
         raise FileNotFoundError(f"Scaler not found at {SCALER_PATH}")
     if not os.path.exists(MODEL_PATH):
@@ -61,7 +81,15 @@ def load_artifacts():
     
     scaler = joblib.load(SCALER_PATH)
     model = joblib.load(MODEL_PATH)
-    print("SUCCESS: Model and Scaler loaded successfully.")
+    
+    # Load metadata for thresholding
+    if os.path.exists(METADATA_PATH):
+        with open(METADATA_PATH, 'r') as f:
+            metadata = json.load(f)
+    else:
+        metadata = {"threshold": 0.5} # Fallback
+        
+    print(f"SUCCESS: Model and Scaler loaded. Active Threshold: {metadata.get('threshold')}")
 
 # Load on startup
 try:
@@ -101,6 +129,7 @@ async def predict(data: PatientData):
 
     try:
         # 1. Start with the dataset means (neutral values)
+        # Breast Cancer Wisconsin (Diagnostic) has 30 features
         features = np.array([
             14.06, 19.24, 91.55, 648.54, 0.096, 0.103, 0.089, 0.048, 0.180, 0.062,
             0.398, 1.218, 2.822, 39.24, 0.007, 0.025, 0.032, 0.011, 0.020, 0.003,
@@ -117,30 +146,35 @@ async def predict(data: PatientData):
         features[6] = data.concavity_mean
         features[7] = data.concave_points_mean
         
-        # 3. Reshape for scaling
-        features_arr = features.reshape(1, -1)
+        # 3. Reshape and Scale
+        features_scaled = scaler.transform(features.reshape(1, -1))
         
-        # 4. Scale features
-        features_scaled = scaler.transform(features_arr)
-        
-        # 5. Predict
-        prediction = int(model.predict(features_scaled)[0])
+        # 4. Probabilistic Prediction with Optimized Threshold
         probabilities = model.predict_proba(features_scaled)[0]
         
-        # 0 = Malignant, 1 = Benign
-        diagnosis = "Malignant" if prediction == 0 else "Benign"
-        confidence = float(np.max(probabilities) * 100)
+        # In this dataset: Class 0 = Malignant, Class 1 = Benign
+        # metadata['threshold'] is the min prob of Malignant (0) to trigger a positive diagnosis
+        threshold = metadata.get("threshold", 0.5)
+        
+        # If Prob(Malignant) >= threshold, classify as Malignant (0)
+        prediction_code = 0 if probabilities[0] >= threshold else 1
+        diagnosis = "Malignant" if prediction_code == 0 else "Benign"
+        
+        # Confidence is the probability of the predicted class
+        confidence = probabilities[prediction_code] * 100
         
         return {
             "diagnosis": diagnosis,
-            "confidence": round(confidence, 2),
-            "prediction_code": prediction,
+            "confidence": round(float(confidence), 2),
+            "prediction_code": int(prediction_code),
+            "threshold_used": threshold,
             "probabilities": {
                 "malignant": round(float(probabilities[0] * 100), 2),
                 "benign": round(float(probabilities[1] * 100), 2)
             }
         }
     except Exception as e:
+        logger.error(f"Prediction error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Prediction error: {str(e)}")
 
 @app.post("/api/scan-report")
@@ -257,4 +291,5 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
