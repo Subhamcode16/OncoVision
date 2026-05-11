@@ -1,6 +1,7 @@
 services:
   - type: web
     name: oncovision-backend
+    region: oregon
     env: python
     buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: python src/server.py

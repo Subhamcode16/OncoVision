@@ -258,7 +258,8 @@ export default function Home() {
         const errorMap: Record<string, string> = {
           'not_oncology_report': 'Clinical Validation Failed: This document does not appear to be an oncology/FNA report.',
           'low_resolution': 'Image Quality Alert: The report text is too blurry to extract precise metrics.',
-          'unsupported_format': 'Format Error: Please provide the report as a clear Image or PDF.'
+          'unsupported_format': 'Format Error: Please provide the report as a clear Image or PDF.',
+          'location_not_supported': 'Regional Restriction: The Render server region (Singapore) is currently blocked by Google AI. Please redeploy the backend in "Oregon (USA)" for full availability.'
         };
         
         let errorMessage = result.error_type || 'Diagnostic Error: The AI encountered an issue parsing this report.';

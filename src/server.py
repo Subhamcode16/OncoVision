@@ -273,11 +273,11 @@ async def scan_report(request: Request, file: UploadFile = File(...)):
         # Model Waterfall Strategy (Resilience against 429/404 errors)
         # Using a broader range of models to ensure availability in cloud environments
         models_to_try = [
+            'gemini-2.5-flash',
             'gemini-2.0-flash', 
             'gemini-1.5-flash', 
             'gemini-1.5-flash-8b', 
-            'gemini-1.5-pro',
-            'gemini-2.0-flash-exp'
+            'gemini-1.5-pro'
         ]
         response = None
         last_error = ""
@@ -306,6 +306,8 @@ async def scan_report(request: Request, file: UploadFile = File(...)):
                 continue
         
         if not response:
+            if "location is not supported" in last_error.lower():
+                return {"success": False, "error_type": "location_not_supported"}
             return {"success": False, "error_type": f"Quota Exhausted: All models are currently unavailable. Last Error: {last_error}"}
 
         # Modern Response Handling (handling safety blocks or empty candidates)
